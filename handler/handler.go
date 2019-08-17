@@ -81,7 +81,7 @@ func GetFileMetaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-// FileQueryHandler:查询批量文件文信息
+// FileQueryHandler:查询批量文件元信息
 func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
@@ -93,4 +93,73 @@ func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(data)
+}
+
+// DownloadHandler:文件下载
+func DownloadHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	fsha1 := r.Form.Get("filehash")
+	fm := meta.GetFileMeta(fsha1)
+	
+	f,err := os.Open(fm.Location)
+	if err!=nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	data,err := ioutil.ReadAll(f)
+	if err!=nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// 加响应头，给浏览器识别
+	w.Header().Set("Content-Type", "application/octect-stream")
+	w.Header().Set("Content-Disposition", "attachment;filename=\""+fm.FileName+"\"")
+
+	w.Write(data)
+
+}
+
+// FileMetaUpdataHandler更新元信息接口（重命名）
+func FileMetaUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	opType := r.Form.Get("op")
+	fileSh1 := r.Form.Get("filehash")
+	newFileName := r.Form.Get("filename")
+
+	if opType != "0" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	curFileMeta := meta.GetFileMeta(fileSh1)
+	curFileMeta.FileName = newFileName
+	meta.UpdateFileMeta(curFileMeta)
+
+	data,err := json.Marshal(curFileMeta)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+}
+
+// FileDeleteHandler:删除文件及元信息
+func FileDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	fileSha1 := r.Form.Get("filehash")
+	fMeta := meta.GetFileMeta(fileSha1)
+	os.Remove(fMeta.Location)
+	meta.RemoveFileMeta(fileSha1)
+
+	w.WriteHeader(http.StatusOK)
 }

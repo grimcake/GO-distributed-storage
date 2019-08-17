@@ -40,3 +40,8 @@ func GetLastFileMetas(count int)[]FileMeta {
 	sort.Sort(ByUploadTime(fMetaArray))
 	return fMetaArray[0:count]
 }
+
+// RemoveFileMeta:删除元信息
+func RemoveFileMeta(fileSha1 string) {
+	delete(fileMetas, fileSha1)
+}
