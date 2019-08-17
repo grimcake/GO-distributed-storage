@@ -1,12 +1,13 @@
 package meta
 
 import (
+	mydb "filestore-server/db"
 	"sort"
 )
 
 // FileMeta : 文件元信息结构
 type FileMeta struct {
-	FileSh1 string
+	FileSh1  string
 	FileName string
 	FileSize int64
 	Location string
@@ -25,15 +26,21 @@ func UpdateFileMeta(fmeta FileMeta) {
 	fileMetas[fmeta.FileSh1] = fmeta
 }
 
+// UpdateFileMetaDB:新增、更新元信息到mysql中
+func UpdateFileMetaDB(fmeta FileMeta) bool {
+	return mydb.OnFileUploadFinished(
+		fmeta.FileSh1, fmeta.FileName, fmeta.FileSize, fmeta.Location)
+}
+
 // GetFileMeta:通过sha1值获取文件元信息对象
 func GetFileMeta(fileSha1 string) FileMeta {
 	return fileMetas[fileSha1]
 }
 
 // GetLatFileMetas:获取批量的文件元信息列表
-func GetLastFileMetas(count int)[]FileMeta {
+func GetLastFileMetas(count int) []FileMeta {
 	fMetaArray := make([]FileMeta, len(fileMetas))
-	for _,v := range fileMetas {
+	for _, v := range fileMetas {
 		fMetaArray = append(fMetaArray, v)
 	}
 

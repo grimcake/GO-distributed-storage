@@ -1,16 +1,16 @@
 package handler
 
-import(
-	"net/http"
-	"io/ioutil"
-	"io"
-	"fmt"
-	"os"
-	"time"
-	"strconv"
+import (
 	"encoding/json"
 	"filestore-server/meta"
 	"filestore-server/util"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
 )
 
 // UploadHandler:处理文件上传
@@ -33,10 +33,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		fileMeta := meta.FileMeta {
-			FileName:head.Filename,
-			Location:"/tmp/"+head.Filename,
-			UploadAt:time.Now().Format("2006-01-02 15:04:05"),
+		fileMeta := meta.FileMeta{
+			FileName: head.Filename,
+			Location: "/tmp/" + head.Filename,
+			UploadAt: time.Now().Format("2006-01-02 15:04:05"),
 		}
 
 		// 创建本地文件接受文件流
@@ -47,7 +47,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer newFile.Close()
 
-		fileMeta.FileSize,err = io.Copy(newFile, file)
+		fileMeta.FileSize, err = io.Copy(newFile, file)
 		if err != nil {
 			fmt.Printf("Failed to save data into file,err:%s\n", err.Error())
 			return
@@ -55,7 +55,8 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		newFile.Seek(0, 0)
 		fileMeta.FileSh1 = util.FileSha1(newFile)
-		meta.UpdateFileMeta(fileMeta)
+		//meta.UpdateFileMeta(fileMeta)
+		_ = meta.UpdateFileMetaDB(fileMeta)
 
 		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
 
@@ -74,20 +75,19 @@ func GetFileMetaHandler(w http.ResponseWriter, r *http.Request) {
 	fMeta := meta.GetFileMeta(filehash)
 	data, err := json.Marshal(fMeta)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError) 
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Write(data)
 }
 
-
 // FileQueryHandler:查询批量文件元信息
 func FileQueryHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	limitCnt,_ := strconv.Atoi(r.Form.Get("limit"))
+	limitCnt, _ := strconv.Atoi(r.Form.Get("limit"))
 	fileMetas := meta.GetLastFileMetas(limitCnt)
-	data,err := json.Marshal(fileMetas)
+	data, err := json.Marshal(fileMetas)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -100,16 +100,16 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	fsha1 := r.Form.Get("filehash")
 	fm := meta.GetFileMeta(fsha1)
-	
-	f,err := os.Open(fm.Location)
-	if err!=nil {
+
+	f, err := os.Open(fm.Location)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
 
-	data,err := ioutil.ReadAll(f)
-	if err!=nil {
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -143,7 +143,7 @@ func FileMetaUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	curFileMeta.FileName = newFileName
 	meta.UpdateFileMeta(curFileMeta)
 
-	data,err := json.Marshal(curFileMeta)
+	data, err := json.Marshal(curFileMeta)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
